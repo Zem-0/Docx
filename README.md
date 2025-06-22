@@ -4,6 +4,30 @@
 
 **URL**: https://lovable.dev/projects/0fc394e5-4174-49a5-9e79-201410c6d733
 
+## About This Project
+
+This is a comprehensive financial infrastructure application that includes advanced document processing capabilities. The project combines payment processing features with intelligent document management, specifically designed to handle financial documents, contracts, and reports in various formats including DOCX, PDF, and more.
+
+### Key Features
+
+- **Payment Processing**: Accept payments online, in person, or through your platform
+- **Document Management**: Upload, process, and manage financial documents
+- **DOCX Processing**: Advanced Word document parsing and analysis
+- **Contract Management**: Automated contract review and processing
+- **Financial Reporting**: Generate and export financial reports
+- **Security**: Enhanced security features for document and payment handling
+
+### Document Processing Capabilities
+
+The application includes sophisticated document processing features:
+
+- **DOCX File Support**: Upload and process Microsoft Word documents
+- **Document Parsing**: Extract text, tables, and formatting from documents
+- **Content Analysis**: AI-powered analysis of document content
+- **Template Generation**: Create document templates for recurring use
+- **Version Control**: Track document versions and changes
+- **Export Options**: Export processed documents in multiple formats
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
