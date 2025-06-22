@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import DocumentProcessor from "./pages/DocumentProcessor";
 import SettingsPageContainer from './pages/Settings';
 import ResearchAgentPageContainer from './pages/ResearchAgent';
+import LibraryPageContainer from './pages/Library';
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/layout/DashboardLayout";
 
@@ -29,6 +30,7 @@ const App = () => (
           } />
           <Route path="/settings" element={<SettingsPageContainer />} />
           <Route path="/research-agent" element={<ResearchAgentPageContainer />} />
+          <Route path="/library" element={<LibraryPageContainer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -9,7 +9,8 @@ import {
   DollarSign,
   LogOut,
   Search,
-  Users
+  Users,
+  Library
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,6 +47,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home, current: location.pathname === '/dashboard' },
     { name: 'Research Agent', href: '/research-agent', icon: Search, current: location.pathname.startsWith('/research-agent') },
     { name: 'Docx Summarizer', href: '/documents', icon: FileText, current: location.pathname === '/documents' },
+    { name: 'My Library', href: '/library', icon: Library, current: location.pathname.startsWith('/library') },
     { name: 'Settings', href: '/settings', icon: Settings, current: location.pathname.startsWith('/settings') },
   ];
   
