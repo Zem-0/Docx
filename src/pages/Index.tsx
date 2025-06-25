@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,7 +21,7 @@ const Index = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                Stellar
+                docx
               </div>
             </div>
             <div className="hidden md:flex items-center space-x-8">
@@ -61,22 +60,21 @@ const Index = () => {
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/20 rounded-full mb-8">
               <Sparkles className="h-4 w-4 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-blue-900">New: Enhanced security features</span>
+              <span className="text-sm font-medium text-blue-900">New: AI-powered document chat</span>
             </div>
             
             <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-8">
               <span className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
-                Financial infrastructure
+                Your AI Document Assistant
               </span>
               <br />
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                for the internet
+                Upload. Chat. Summarize.
               </span>
             </h1>
             
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-12 leading-relaxed">
-              Millions of companies of all sizes use Stellar's software and APIs to accept payments, 
-              send payouts, and manage their businesses online with unprecedented ease and security.
+              docx lets you upload your documents (PDF, DOCX, XLSX, images) and instantly chat with AI to get summaries, extract key information, and answer your questions. Secure, private, and easy to use for everyone.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
@@ -85,11 +83,11 @@ const Index = () => {
                 className="bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
                 onClick={() => openAuthModal('signup')}
               >
-                Start with payments
+                Get Started Free
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button variant="outline" size="lg" className="px-8 py-4 text-lg border-gray-300 hover:border-gray-400 hover:bg-gray-50">
-                Contact sales
+                Learn More
               </Button>
             </div>
 
@@ -97,15 +95,15 @@ const Index = () => {
             <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-600">
               <div className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                SOC 2 Type II certified
+                Secure & Private
               </div>
               <div className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                PCI DSS Level 1
+                Fast AI-Powered Answers
               </div>
               <div className="flex items-center">
                 <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
-                99.99% uptime SLA
+                Supports PDF, DOCX, XLSX, Images
               </div>
             </div>
           </div>
@@ -116,7 +114,7 @@ const Index = () => {
       <section className="py-16 bg-gradient-to-r from-gray-50 to-blue-50/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-gray-600 mb-12 font-medium">
-            Trusted by ambitious companies around the world
+            Trusted by professionals, students, and teams worldwide
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 items-center">
             {['Amazon', 'Google', 'Shopify', 'Spotify', 'Zoom', 'Salesforce'].map((company) => (
@@ -134,22 +132,22 @@ const Index = () => {
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                A complete commerce toolkit
+                Everything you need for document intelligence
               </span>
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Everything you need to run your business, from payments to payouts to everything in between.
+              Upload, chat, summarize, and extract insights from your documents with ease.
             </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: CreditCard, title: "Payments", description: "Accept payments online, in person, or through your platform.", color: "blue" },
-              { icon: Shield, title: "Terminal", description: "In-person payments with our card readers and point-of-sale solutions.", color: "green" },
-              { icon: Globe, title: "Connect", description: "Everything platforms need to get sellers paid.", color: "purple" },
-              { icon: Users, title: "Billing", description: "Build and scale your recurring business model.", color: "orange" },
-              { icon: Zap, title: "Invoicing", description: "Create and send invoices in minutes.", color: "red" },
-              { icon: BarChart3, title: "Reporting", description: "Detailed reporting and analytics for your business.", color: "indigo" }
+              { icon: CreditCard, title: "Upload Documents", description: "Upload PDF, DOCX, XLSX, and image files securely.", color: "blue" },
+              { icon: Zap, title: "AI Chat", description: "Chat with AI to ask questions about your documents.", color: "purple" },
+              { icon: BarChart3, title: "Summarize & Extract", description: "Get instant summaries and extract key information.", color: "green" },
+              { icon: Shield, title: "Privacy First", description: "Your documents are encrypted and never shared.", color: "indigo" },
+              { icon: Users, title: "Collaborate", description: "Share insights and collaborate with your team.", color: "orange" },
+              { icon: Globe, title: "Access Anywhere", description: "Use docx from any device, anywhere in the world.", color: "red" }
             ].map((feature, index) => (
               <Card key={index} className="border-0 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-white to-gray-50/50">
                 <CardHeader>

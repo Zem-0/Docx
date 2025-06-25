@@ -68,6 +68,7 @@ interface Document {
   status: 'uploading' | 'processing' | 'completed' | 'error';
   progress?: number;
   filePath?: string;
+  document_id?: string;
 }
 
 interface ChatMessage {
@@ -163,7 +164,8 @@ const DocumentProcessor: React.FC = () => {
             uploadedAt: new Date(file.created_at || Date.now()),
             status: 'completed' as const,
             progress: 100,
-            filePath: `${user.id}/${file.name}`
+            filePath: `${user.id}/${file.name}`,
+            document_id: file.name === `${user.id}/${file.name}`.split('/').pop() ? file.id : undefined
           }));
 
         setDocuments(userDocuments);
@@ -260,7 +262,8 @@ const DocumentProcessor: React.FC = () => {
               uploadedAt: new Date(file.created_at || Date.now()),
               status: 'completed' as const,
               progress: 100,
-              filePath: `${user.id}/${file.name}`
+              filePath: `${user.id}/${file.name}`,
+              document_id: file.name === filePath.split('/').pop() ? documentId : undefined
             }));
 
           setDocuments(userDocuments);
@@ -280,7 +283,10 @@ const DocumentProcessor: React.FC = () => {
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !selectedDocument) return;
+    if (!chatInput.trim() || !selectedDocument || !selectedDocument.document_id) {
+      toast({ title: 'Error', description: 'No valid document selected for chat.', variant: 'destructive' });
+      return;
+    }
 
     const userMessage: ChatMessage = { id: `msg-${Date.now()}`, text: chatInput, sender: 'user', timestamp: Date.now() };
     setChatMessages(prev => [...prev, userMessage]);
@@ -294,7 +300,7 @@ const DocumentProcessor: React.FC = () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message: chatInput,
-                document_id: selectedDocument.id,
+                document_id: selectedDocument.document_id,
             }),
         });
 
@@ -421,7 +427,8 @@ const DocumentProcessor: React.FC = () => {
                 uploadedAt: new Date(file.created_at || Date.now()),
                 status: 'completed' as const,
                 progress: 100,
-                filePath: `${user.id}/${file.name}`
+                filePath: `${user.id}/${file.name}`,
+                document_id: file.name === docToDelete.filePath.split('/').pop() ? docToDelete.document_id : undefined
               }));
 
             setDocuments(userDocuments);
@@ -573,16 +580,19 @@ const DocumentProcessor: React.FC = () => {
                           value={chatInput}
                           onChange={(e) => setChatInput(e.target.value)}
                           placeholder="Ask anything about your document..."
-                          disabled={isChatting}
+                          disabled={isChatting || !selectedDocument?.document_id}
                           className="h-14 text-base"
                         />
                         <p className="text-xs text-gray-500 mt-1">
                           Press Enter to send, Shift+Enter for new line
                         </p>
+                        {!selectedDocument?.document_id && (
+                          <p className="text-xs text-red-500 mt-1">Chat is only available for documents with a valid document ID.</p>
+                        )}
                       </div>
                       <Button 
                         type="submit" 
-                        disabled={isChatting}
+                        disabled={isChatting || !selectedDocument?.document_id}
                         size="lg"
                         className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 h-14 px-8"
                       >
