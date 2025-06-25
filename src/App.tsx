@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import DocumentProcessor from "./pages/DocumentProcessor";
@@ -11,32 +11,40 @@ import ResearchAgentPageContainer from './pages/ResearchAgent';
 import LibraryPageContainer from './pages/Library';
 import NotFound from "./pages/NotFound";
 import DashboardLayout from "./components/layout/DashboardLayout";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "./lib/supabaseClient";
 
 const queryClient = new QueryClient();
 
 function AppRoutes() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const wasLoggedIn = useRef(false);
 
   useEffect(() => {
-    // Listen for auth state changes and redirect after login
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate("/dashboard", { replace: true });
-      }
-    });
     // On mount, check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        // Optionally redirect or set state
-        // navigate("/dashboard", { replace: true });
-      }
+      wasLoggedIn.current = !!session;
     });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only redirect if the user just signed in (was not logged in before)
+      if (
+        event === "SIGNED_IN" &&
+        session &&
+        !wasLoggedIn.current &&
+        (location.pathname === "/" || location.pathname === "/login")
+      ) {
+        navigate("/dashboard", { replace: true });
+      }
+      // Update the ref for future events
+      wasLoggedIn.current = !!session;
+    });
+
     return () => {
       listener?.subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.pathname]);
 
   return (
     <Routes>
