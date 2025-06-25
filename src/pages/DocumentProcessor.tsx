@@ -58,25 +58,9 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-
-interface Document {
-  id: string;
-  name: string;
-  type: 'docx' | 'pdf' | 'xlsx' | 'image';
-  size: number;
-  uploadedAt: Date;
-  status: 'uploading' | 'processing' | 'completed' | 'error';
-  progress?: number;
-  filePath?: string;
-  document_id?: string;
-}
-
-interface ChatMessage {
-    id: string;
-    text: string;
-    sender: 'user' | 'bot';
-    timestamp?: number;
-}
+import { Document, ChatMessage } from '@/lib/types';
+import { DocumentMappingService } from '@/lib/documentMappingService';
+import { ChatMessageService } from '@/lib/chatMessageService';
 
 // Simple Markdown to React elements (bold, italics, code, line breaks)
 function renderMarkdown(text: string) {
@@ -153,22 +137,59 @@ const DocumentProcessor: React.FC = () => {
           return;
         }
 
+        // Get document mappings for this user
+        const documentMappings = await DocumentMappingService.getUserMappings(user.id);
+        
+        // Create a map of file paths to backend document IDs
+        const filePathToBackendId = new Map<string, string>();
+        documentMappings.forEach(mapping => {
+          filePathToBackendId.set(mapping.supabase_file_path, mapping.backend_document_id);
+        });
+
         // Transform the files data into Document objects
         const userDocuments: Document[] = files
           .filter(file => file.name && !file.name.startsWith('.')) // Filter out hidden files
-          .map(file => ({
-            id: file.id || `file-${Date.now()}-${file.name}`,
-            name: file.name,
-            type: getFileType(file.name),
-            size: file.metadata?.size || 0,
-            uploadedAt: new Date(file.created_at || Date.now()),
-            status: 'completed' as const,
-            progress: 100,
-            filePath: `${user.id}/${file.name}`,
-            document_id: file.name === `${user.id}/${file.name}`.split('/').pop() ? file.id : undefined
-          }));
+          .map(file => {
+            const filePath = `${user.id}/${file.name}`;
+            const mapping = documentMappings.find(m => m.supabase_file_path === filePath);
+            
+            return {
+              id: file.id || `file-${Date.now()}-${file.name}`,
+              name: file.name,
+              type: getFileType(file.name),
+              size: file.metadata?.size || 0,
+              uploadedAt: new Date(file.created_at || Date.now()),
+              status: 'completed' as const,
+              progress: 100,
+              filePath: filePath,
+              document_id: mapping?.backend_document_id, // Use the backend document ID from mapping
+              mapping_id: mapping?.id
+            };
+          });
 
-        setDocuments(userDocuments);
+        // Get chat history information for all documents
+        const documentsWithChatInfo = await Promise.all(
+          userDocuments.map(async (doc) => {
+            if (doc.mapping_id) {
+              try {
+                const hasHistory = await ChatMessageService.hasChatHistory(user.id, doc.mapping_id);
+                const lastMessageTime = await ChatMessageService.getLastMessageTime(user.id, doc.mapping_id);
+                
+                return {
+                  ...doc,
+                  has_chat_history: hasHistory,
+                  last_chat_time: lastMessageTime
+                };
+              } catch (error) {
+                console.warn(`Failed to get chat info for document ${doc.name}:`, error);
+                return doc;
+              }
+            }
+            return doc;
+          })
+        );
+
+        setDocuments(documentsWithChatInfo);
       } catch (error) {
         console.error('Error fetching documents:', error);
         toast({ 
@@ -237,12 +258,22 @@ const DocumentProcessor: React.FC = () => {
         const result = await response.json();
         const documentId = result.document_id;
         
+        // Step 3: Create document mapping in Supabase
+        await DocumentMappingService.createMapping(
+          user.id,
+          documentId,
+          filePath,
+          file.name,
+          getFileType(file.name),
+          file.size
+        );
+        
         updateDocumentProgress(tempId, 100);
 
-        // Remove the temporary document and refresh the list from Supabase
+        // Remove the temporary document and refresh the list
         setDocuments(prev => prev.filter(doc => doc.id !== tempId));
         
-        // Refresh documents from Supabase
+        // Refresh documents from Supabase with mappings
         const { data: files, error } = await supabase.storage
           .from('documents')
           .list(user.id, {
@@ -252,21 +283,30 @@ const DocumentProcessor: React.FC = () => {
           });
 
         if (!error && files) {
+          // Get document mappings for this user
+          const documentMappings = await DocumentMappingService.getUserMappings(user.id);
+          
           const userDocuments: Document[] = files
             .filter(file => file.name && !file.name.startsWith('.'))
-            .map(file => ({
-              id: file.id || `file-${Date.now()}-${file.name}`,
-              name: file.name,
-              type: getFileType(file.name),
-              size: file.metadata?.size || 0,
-              uploadedAt: new Date(file.created_at || Date.now()),
-              status: 'completed' as const,
-              progress: 100,
-              filePath: `${user.id}/${file.name}`,
-              document_id: file.name === filePath.split('/').pop() ? documentId : undefined
-            }));
+            .map(file => {
+              const filePath = `${user.id}/${file.name}`;
+              const mapping = documentMappings.find(m => m.supabase_file_path === filePath);
+              
+              return {
+                id: file.id || `file-${Date.now()}-${file.name}`,
+                name: file.name,
+                type: getFileType(file.name),
+                size: file.metadata?.size || 0,
+                uploadedAt: new Date(file.created_at || Date.now()),
+                status: 'completed' as const,
+                progress: 100,
+                filePath: filePath,
+                document_id: mapping?.backend_document_id,
+                mapping_id: mapping?.id
+              };
+            });
 
-          setDocuments(userDocuments);
+            setDocuments(userDocuments);
         }
 
         toast({ title: "Success", description: `${file.name} uploaded successfully.` });
@@ -283,17 +323,30 @@ const DocumentProcessor: React.FC = () => {
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim() || !selectedDocument || !selectedDocument.document_id) {
+    if (!chatInput.trim() || !selectedDocument || !selectedDocument.document_id || !selectedDocument.mapping_id) {
       toast({ title: 'Error', description: 'No valid document selected for chat.', variant: 'destructive' });
       return;
     }
 
-    const userMessage: ChatMessage = { id: `msg-${Date.now()}`, text: chatInput, sender: 'user', timestamp: Date.now() };
+    const userMessage: ChatMessage = { 
+      id: `msg-${Date.now()}`, 
+      message_text: chatInput, 
+      sender: 'user', 
+      message_timestamp: new Date().toISOString() 
+    };
     setChatMessages(prev => [...prev, userMessage]);
     setChatInput('');
     setIsChatting(true);
 
     try {
+        // Save user message to database
+        await ChatMessageService.saveMessage(
+          user!.id,
+          selectedDocument.mapping_id!,
+          chatInput,
+          'user'
+        );
+
         const baseUrl = import.meta.env.VITE_API_BASE_URL;
         const response = await fetch(`${baseUrl}/chat`, {
             method: 'POST',
@@ -310,8 +363,21 @@ const DocumentProcessor: React.FC = () => {
         }
 
         const result = await response.json();
-        const botMessage: ChatMessage = { id: `msg-${Date.now()}-bot`, text: result.response, sender: 'bot', timestamp: Date.now() };
+        const botMessage: ChatMessage = { 
+          id: `msg-${Date.now()}-bot`, 
+          message_text: result.response, 
+          sender: 'bot', 
+          message_timestamp: new Date().toISOString() 
+        };
         setChatMessages(prev => [...prev, botMessage]);
+
+        // Save bot message to database
+        await ChatMessageService.saveMessage(
+          user!.id,
+          selectedDocument.mapping_id!,
+          result.response,
+          'bot'
+        );
 
     } catch (error: any) {
         toast({ title: 'Error', description: `Chat failed: ${error.message}`, variant: 'destructive' });
@@ -362,9 +428,21 @@ const DocumentProcessor: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const openChat = (doc: Document) => {
-      setSelectedDocument(doc);
+  const openChat = async (doc: Document) => {
+    setSelectedDocument(doc);
+    
+    // Load chat history if the document has a mapping ID
+    if (doc.mapping_id && user) {
+      try {
+        const chatHistory = await ChatMessageService.getChatHistory(user.id, doc.mapping_id);
+        setChatMessages(chatHistory);
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+        setChatMessages([]);
+      }
+    } else {
       setChatMessages([]);
+    }
   };
 
   const handleView = (doc: Document) => {
@@ -404,8 +482,19 @@ const DocumentProcessor: React.FC = () => {
   const handleDelete = async () => {
       if (!docToDelete || !docToDelete.filePath || !user) return;
       try {
+          // Delete from Supabase storage
           const { error } = await supabase.storage.from('documents').remove([docToDelete.filePath]);
           if (error) throw error;
+          
+          // Delete the document mapping if it exists
+          if (docToDelete.mapping_id) {
+            try {
+              await DocumentMappingService.deleteMapping(docToDelete.mapping_id);
+            } catch (mappingError) {
+              console.warn('Failed to delete document mapping:', mappingError);
+              // Continue with deletion even if mapping deletion fails
+            }
+          }
           
           // Refresh documents from Supabase after deletion
           const { data: files, error: listError } = await supabase.storage
@@ -417,19 +506,28 @@ const DocumentProcessor: React.FC = () => {
             });
 
           if (!listError && files) {
+            // Get document mappings for this user
+            const documentMappings = await DocumentMappingService.getUserMappings(user.id);
+            
             const userDocuments: Document[] = files
               .filter(file => file.name && !file.name.startsWith('.'))
-              .map(file => ({
-                id: file.id || `file-${Date.now()}-${file.name}`,
-                name: file.name,
-                type: getFileType(file.name),
-                size: file.metadata?.size || 0,
-                uploadedAt: new Date(file.created_at || Date.now()),
-                status: 'completed' as const,
-                progress: 100,
-                filePath: `${user.id}/${file.name}`,
-                document_id: file.name === docToDelete.filePath.split('/').pop() ? docToDelete.document_id : undefined
-              }));
+              .map(file => {
+                const filePath = `${user.id}/${file.name}`;
+                const mapping = documentMappings.find(m => m.supabase_file_path === filePath);
+                
+                return {
+                  id: file.id || `file-${Date.now()}-${file.name}`,
+                  name: file.name,
+                  type: getFileType(file.name),
+                  size: file.metadata?.size || 0,
+                  uploadedAt: new Date(file.created_at || Date.now()),
+                  status: 'completed' as const,
+                  progress: 100,
+                  filePath: filePath,
+                  document_id: mapping?.backend_document_id,
+                  mapping_id: mapping?.id
+                };
+              });
 
             setDocuments(userDocuments);
           }
@@ -533,12 +631,12 @@ const DocumentProcessor: React.FC = () => {
                             : 'bg-white border rounded-bl-none shadow-md'
                         }`}>
                           {msg.sender === 'bot' ? (
-                            <div className="text-base leading-relaxed">{renderMarkdown(msg.text)}</div>
+                            <div className="text-base leading-relaxed">{renderMarkdown(msg.message_text)}</div>
                           ) : (
-                            <span className="text-base">{msg.text}</span>
+                            <span className="text-base">{msg.message_text}</span>
                           )}
                           <div className="flex items-center gap-3 mt-3 text-xs opacity-70">
-                            <span>{new Date(msg.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span>{new Date(msg.message_timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             {msg.sender === 'bot' && (
                               <>
                                 <button className="p-1 hover:bg-gray-100 rounded transition-colors">
@@ -701,7 +799,13 @@ const DocumentProcessor: React.FC = () => {
                       <TableHeader><TableRow><TableHead>Document</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                       <TableBody>
                         {filteredDocuments.map((doc) => (
-                          <TableRow key={doc.id} className="hover:bg-gray-50 transition-colors">
+                          <TableRow
+                            key={doc.id}
+                            className={
+                              `hover:bg-gray-50 transition-colors ` +
+                              (selectedDocument?.id === doc.id ? 'bg-blue-100 border-l-4 border-blue-500' : '')
+                            }
+                          >
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <div className="p-2 bg-gray-100 rounded-lg">{getFileIcon(doc.type)}</div>
